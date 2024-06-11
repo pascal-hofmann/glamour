@@ -1,6 +1,7 @@
 package ansi
 
 import (
+	"github.com/muesli/termenv"
 	"io"
 	"net/url"
 )
@@ -14,59 +15,15 @@ type LinkElement struct {
 }
 
 func (e *LinkElement) Render(w io.Writer, ctx RenderContext) error {
-	var textRendered bool
-	if len(e.Text) > 0 && e.Text != e.URL {
-		textRendered = true
-
-		el := &BaseElement{
-			Token: e.Text,
-			Style: ctx.options.Styles.LinkText,
-		}
-		err := el.Render(w, ctx)
-		if err != nil {
-			return err
-		}
-	}
-
-	/*
-		if node.LastChild != nil {
-			if node.LastChild.Type == bf.Image {
-				el := tr.NewElement(node.LastChild)
-				err := el.Renderer.Render(w, node.LastChild, tr)
-				if err != nil {
-					return err
-				}
-			}
-			if len(node.LastChild.Literal) > 0 &&
-				string(node.LastChild.Literal) != string(node.LinkData.Destination) {
-				textRendered = true
-				el := &BaseElement{
-					Token: string(node.LastChild.Literal),
-					Style: ctx.style[LinkText],
-				}
-				err := el.Render(w, node.LastChild, tr)
-				if err != nil {
-					return err
-				}
-			}
-		}
-	*/
-
 	u, err := url.Parse(e.URL)
-	if err == nil &&
-		"#"+u.Fragment != e.URL { // if the URL only consists of an anchor, ignore it
-		pre := " "
-		style := ctx.options.Styles.Link
-		if !textRendered {
-			pre = ""
-			style.BlockPrefix = ""
-			style.BlockSuffix = ""
+	if err == nil {
+		text := termenv.Hyperlink(resolveRelativeURL(e.BaseURL, e.URL), e.Text)
+		if "#"+u.Fragment == e.URL {
+			text = e.Text // if the URL is just an anchor ignore it as we don't support anchors
 		}
-
 		el := &BaseElement{
-			Token:  resolveRelativeURL(e.BaseURL, e.URL),
-			Prefix: pre,
-			Style:  style,
+			Token: text,
+			Style: ctx.options.Styles.LinkText,
 		}
 		err := el.Render(w, ctx)
 		if err != nil {
